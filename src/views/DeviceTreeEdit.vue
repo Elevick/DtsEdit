@@ -5,10 +5,20 @@
       <DevicePropertyEditor :node="selectedNode" @update="updateNode" />
     </aside>
     <main class="canvas">
-      <DeviceTreeCanvas @selectNode="onSelectNode" />
+      <DeviceTreeCanvas 
+        @selectNode="onSelectNode" 
+        @nodesChange="onNodesChange" 
+        @connectionsChange="onConnectionsChange"
+        ref="canvasRef"
+      />
     </main>
     <button class="dts-btn" @click="showDtsModal = true">查看DTS代码</button>
-    <DtsCodeModal :visible="showDtsModal" @update:visible="showDtsModal = $event" />
+    <DtsCodeModal 
+      :visible="showDtsModal" 
+      :nodes="treeNodes" 
+      :connections="connections"
+      @update:visible="showDtsModal = $event" 
+    />
   </div>
 </template>
 
@@ -19,14 +29,57 @@ import DeviceTreeCanvas from '../components/DeviceTreeCanvas.vue'
 import DevicePropertyEditor from '../components/DevicePropertyEditor.vue'
 import DtsCodeModal from '../components/DtsCodeModal.vue'
 
+interface TreeNode {
+  id: number
+  type: string
+  label: string
+  x: number
+  y: number
+  inputs: { id: string, name: string }[]
+  outputs: { id: string, name: string }[]
+}
+
+interface Connection {
+  id: string
+  sourceId: number
+  sourcePointId: string
+  targetId: number
+  targetPointId: string
+  path: string
+}
+
 const showDtsModal = ref(false)
-const selectedNode = ref(null)
-function onSelectNode(node: any) {
+const selectedNode = ref<TreeNode | null>(null)
+const canvasRef = ref<any>(null)
+const treeNodes = ref<TreeNode[]>([])
+const connections = ref<Connection[]>([])
+
+function onSelectNode(node: TreeNode) {
   selectedNode.value = node
 }
+
 function updateNode(newNode: any) {
-  // 这里后续可同步到画布节点数据
-  selectedNode.value = { ...(selectedNode.value || {}), ...newNode }
+  // 更新选中节点的数据
+  if (selectedNode.value) {
+    selectedNode.value = { ...selectedNode.value, ...newNode }
+    
+    // 同步到画布节点数据
+    if (canvasRef.value && selectedNode.value) {
+      const nodeIndex = treeNodes.value.findIndex((n: TreeNode) => n.id === selectedNode.value?.id)
+      if (nodeIndex >= 0 && selectedNode.value) {
+        // 更新节点标签
+        treeNodes.value[nodeIndex].label = selectedNode.value.label
+      }
+    }
+  }
+}
+
+function onNodesChange(nodes: TreeNode[]) {
+  treeNodes.value = nodes
+}
+
+function onConnectionsChange(newConnections: Connection[]) {
+  connections.value = newConnections
 }
 </script>
 

@@ -21,12 +21,44 @@
 <script setup lang="ts">
 import { ElCard, ElDivider, ElSpace } from 'element-plus'
 const items = [
-  { type: 'node', label: '节点' },
-  { type: 'property', label: '属性' },
-  { type: 'interrupt', label: '中断' },
-  { type: 'reg', label: '寄存器' },
+  { 
+    type: 'node', 
+    label: '节点',
+    inputs: [],
+    outputs: [{ id: 'output-1', name: '输出' }]
+  },
+  { 
+    type: 'property', 
+    label: '属性',
+    inputs: [{ id: 'input-1', name: '输入' }],
+    outputs: []
+  },
+  { 
+    type: 'interrupt', 
+    label: '中断',
+    inputs: [{ id: 'input-1', name: '输入' }],
+    outputs: []
+  },
+  { 
+    type: 'reg', 
+    label: '寄存器',
+    inputs: [{ id: 'input-1', name: '输入' }],
+    outputs: []
+  },
 ]
-function onDragStart(item: { type: string; label: string }, e: DragEvent) {
+interface ConnectionPoint {
+  id: string
+  name: string
+}
+
+interface PaletteItem {
+  type: string
+  label: string
+  inputs: ConnectionPoint[]
+  outputs: ConnectionPoint[]
+}
+
+function onDragStart(item: PaletteItem, e: DragEvent) {
   if (e.dataTransfer) {
     e.dataTransfer.setData('application/x-dts-item', JSON.stringify(item))
     // 创建自定义拖拽预览
