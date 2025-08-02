@@ -1,7 +1,8 @@
 <template>
-  <el-card class="canvas-area" shadow="never"
+  <el-card class="canvas-area" :class="{ 'canvas-grabbing': isDraggingCanvas }" shadow="never"
     @dragover.prevent
     @drop="onDrop"
+    @mousedown.self="onCanvasMouseDown"
   >
     <svg class="connections-layer">
       <path v-for="connection in connections" :key="connection.id"
@@ -168,7 +169,7 @@ function onDrop(e: DragEvent) {
   }
 }
 
-// 拖动逻辑
+// 节点拖动逻辑
 let draggingIdx: number | null = null
 let offsetX = 0, offsetY = 0
 
@@ -178,6 +179,22 @@ function onNodeMouseDown(idx: number, e: MouseEvent) {
   offsetY = e.offsetY
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
+}
+
+// 画布拖动逻辑
+let isDraggingCanvas = false
+let lastMouseX = 0
+let lastMouseY = 0
+let canvasOffsetX = 0
+let canvasOffsetY = 0
+
+function onCanvasMouseDown(e: MouseEvent) {
+  // 点击画布背景时触发拖拽
+  isDraggingCanvas = true
+  lastMouseX = e.clientX
+  lastMouseY = e.clientY
+  window.addEventListener('mousemove', onCanvasMouseMove)
+  window.addEventListener('mouseup', onCanvasMouseUp)
 }
 
 // 开始从输出点创建连接
@@ -364,11 +381,39 @@ function onMouseUp() {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
 }
+
+function onCanvasMouseMove(e: MouseEvent) {
+  if (isDraggingCanvas) {
+    const deltaX = e.clientX - lastMouseX
+    const deltaY = e.clientY - lastMouseY
+    lastMouseX = e.clientX
+    lastMouseY = e.clientY
+    
+    // 移动所有节点
+    nodes.value.forEach(node => {
+      node.x += deltaX
+      node.y += deltaY
+    })
+    
+    // 更新连接线
+    updateConnections()
+  }
+}
+
+function onCanvasMouseUp() {
+  isDraggingCanvas = false
+  document.body.style.cursor = 'auto'
+  window.removeEventListener('mousemove', onCanvasMouseMove)
+  window.removeEventListener('mouseup', onCanvasMouseUp)
+}
+
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('mousemove', onConnectionMove)
   window.removeEventListener('mouseup', onConnectionEnd)
+  window.removeEventListener('mousemove', onCanvasMouseMove)
+  window.removeEventListener('mouseup', onCanvasMouseUp)
 })
 
 const emit = defineEmits(['selectNode', 'nodesChange', 'connectionsChange'])
@@ -392,12 +437,16 @@ watch(connections, (newConnections) => {
   width: 100%;
   height: 90%;
   min-height: 600px;
-  background: #f9fafb;
-  border: 2px dashed #b3d8fd;
+  background-color: #f9fafb;
+  background-image: linear-gradient(#e4e9f2 1px, transparent 1px), linear-gradient(90deg, #e4e9f2 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: none;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: grab;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
@@ -506,5 +555,9 @@ watch(connections, (newConnections) => {
 
 .output-point:hover {
   transform: scale(1.2);
+}
+
+.canvas-grabbing {
+  cursor: grabbing !important;
 }
 </style>
