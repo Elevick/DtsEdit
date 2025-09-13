@@ -5,12 +5,30 @@
     @mousedown.self="onCanvasMouseDown"
   >
     <svg class="connections-layer">
+      <!-- 连接线阴影层 -->
+      <defs>
+        <filter id="connection-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(64, 158, 255, 0.3)"/>
+        </filter>
+        <linearGradient id="connection-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#409eff;stop-opacity:0.8" />
+          <stop offset="50%" style="stop-color:#67c23a;stop-opacity:0.9" />
+          <stop offset="100%" style="stop-color:#409eff;stop-opacity:0.8" />
+        </linearGradient>
+      </defs>
+      
+      <!-- 连接线 -->
       <path v-for="connection in connections" :key="connection.id"
         :d="connection.path"
         class="connection-path"
+        :class="{ 'connection-selected': selectedConnectionId === connection.id }"
+        @click="selectConnection(connection.id)"
       />
+      
+      <!-- 临时连接线 -->
       <path v-if="tempConnectionPath" :d="tempConnectionPath" class="temp-connection-path" />
     </svg>
+    
     <div v-if="nodes.length === 0" class="canvas-placeholder">将设备树元件拖拽到此处</div>
     <div v-for="(node, idx) in nodes" :key="node.id"
       class="canvas-node"
@@ -71,10 +89,17 @@ interface Connection {
   targetPointId: string
   path: string
 }
+
 const nodes = ref<CanvasNode[]>([])
 let nodeId = 1
 
 const connections = ref<Connection[]>([])
+const selectedConnectionId = ref<string | null>(null)
+
+// 选择连接线
+function selectConnection(connectionId: string) {
+  selectedConnectionId.value = connectionId
+}
 
 // 计算连接线路径
 function updateConnectionPaths() {
@@ -363,6 +388,7 @@ function onConnectionEnd(e: MouseEvent) {
   window.removeEventListener('mouseup', onConnectionEnd)
   }
 }
+
 function onMouseMove(e: MouseEvent) {
   if (draggingIdx !== null) {
     const canvas = document.querySelector('.canvas-area') as HTMLElement
@@ -376,6 +402,7 @@ function onMouseMove(e: MouseEvent) {
     updateConnections()
   }
 }
+
 function onMouseUp() {
   draggingIdx = null
   window.removeEventListener('mousemove', onMouseMove)
@@ -464,22 +491,64 @@ watch(connections, (newConnections) => {
 
 .connection-path {
   fill: none;
+  stroke: url(#connection-gradient);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#connection-shadow);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  stroke-dasharray: none;
+}
+
+.connection-path:hover {
+  stroke-width: 4px;
+  filter: url(#connection-shadow) brightness(1.2);
   stroke: #409eff;
-  stroke-width: 2px;
-  stroke-dasharray: 5, 5;
+}
+
+.connection-selected {
+  stroke: #e6a23c !important;
+  stroke-width: 4px !important;
+  filter: url(#connection-shadow) brightness(1.3) !important;
+  animation: connection-pulse 2s infinite;
+}
+
+@keyframes connection-pulse {
+  0%, 100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.6;
+  }
 }
 
 .temp-connection-path {
   fill: none;
   stroke: #409eff;
-  stroke-width: 2px;
-  stroke-dasharray: 3, 3;
-  stroke-opacity: 0.7;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.8;
+  stroke-dasharray: 8, 4;
+  animation: temp-connection-dash 1s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(64, 158, 255, 0.3));
 }
+
+@keyframes temp-connection-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 12;
+  }
+}
+
 .canvas-placeholder {
   color: #b3b3b3;
   font-size: 18px;
 }
+
 .canvas-node {
   position: absolute;
   min-width: 120px;
@@ -520,17 +589,21 @@ watch(connections, (newConnections) => {
 .input-point {
   position: absolute;
   left: -5px;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: #fff;
-  border: 1.5px solid #409eff;
+  border: 2px solid #409eff;
   border-radius: 50%;
   cursor: crosshair;
   z-index: 3;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.2);
 }
 
 .input-point:hover {
-  transform: scale(1.2);
+  transform: scale(1.3);
+  background: #409eff;
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.4);
 }
 
 .output-points {
@@ -544,17 +617,21 @@ watch(connections, (newConnections) => {
 .output-point {
   position: absolute;
   right: -5px;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: #409eff;
-  border: 1.5px solid #fff;
+  border: 2px solid #fff;
   border-radius: 50%;
   cursor: crosshair;
   z-index: 3;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.3);
 }
 
 .output-point:hover {
-  transform: scale(1.2);
+  transform: scale(1.3);
+  background: #67c23a;
+  box-shadow: 0 4px 8px rgba(103, 194, 58, 0.4);
 }
 
 .canvas-grabbing {
