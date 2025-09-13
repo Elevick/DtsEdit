@@ -419,4 +419,10 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
 .palette-tabs :deep(.el-tabs__active-bar) {
   background-color: #409eff;
 }
+
+@keyframes node-create {
+  0% { transform: scale(0) rotate(180deg); opacity: 0; }
+  50% { transform: scale(1.1) rotate(90deg); opacity: 0.8; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
 </style>
