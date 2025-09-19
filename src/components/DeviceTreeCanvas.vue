@@ -817,43 +817,36 @@ watch(connections, (newConnections) => {
 }
 
 .canvas-node:hover {
-  transform: translateY(-4px) scale(1.03);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
   border-color: #409eff;
 }
 
 .canvas-node:active {
-  transform: translateY(-2px) scale(1.01);
   box-shadow: 0 12px 40px rgba(64, 158, 255, 0.3);
 }
 
 .node-selected {
   border-color: #409eff !important;
   box-shadow: 0 0 0 4px rgba(64, 158, 255, 0.2) !important;
-  transform: translateY(-4px) scale(1.03);
 }
 
 .node-dragging {
-  transform: rotate(3deg) scale(1.08);
+  transform: scale(1.05);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   z-index: 10;
 }
 
 .node-created {
-  animation: node-create 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: node-create 0.3s ease-out;
 }
 
 @keyframes node-create {
   0% {
-    transform: scale(0) rotate(180deg);
+    transform: scale(0);
     opacity: 0;
   }
-  50% {
-    transform: scale(1.15) rotate(90deg);
-    opacity: 0.8;
-  }
   100% {
-    transform: scale(1) rotate(0deg);
+    transform: scale(1);
     opacity: 1;
   }
 }
