@@ -28,13 +28,30 @@ function emitUpdate() {
 
 <style scoped>
 .property-editor {
-  margin-top: 16px;
-  padding: 12px 8px 8px 8px;
-  font-size: 15px;
+  margin: 0;
+  padding: 8px;
+  font-size: 14px;
+  flex-shrink: 0;
+  height: 50%;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 .property-title {
   font-weight: bold;
-  font-size: 16px;
+  font-size: 14px;
   margin-bottom: 4px;
+  color: #2c3e50;
+}
+.property-editor :deep(.el-form-item) {
+  margin-bottom: 8px;
+}
+.property-editor :deep(.el-form-item__label) {
+  font-size: 12px;
+  color: #666;
+}
+.property-editor :deep(.el-input__inner) {
+  font-size: 12px;
+  height: 28px;
 }
 </style> 

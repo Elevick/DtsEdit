@@ -93,11 +93,12 @@ function onConnectionsChange(newConnections: Connection[]) {
   width: 220px;
   background: #f7f7f7;
   border-right: 1px solid #eee;
-  padding: 16px 8px 0 0;
+  padding: 8px 8px 0 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   height: 100%;
+  gap: 8px;
 }
 .canvas {
   flex: 1;

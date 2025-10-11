@@ -26,11 +26,11 @@
               class="palette-item"
               :class="`palette-item-${category.key}`"
               shadow="hover"
-              body-style="padding: 8px 12px; display: flex; align-items: center; gap: 8px;"
+              body-style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;"
               draggable="true"
               @dragstart="onDragStart(item, $event)"
             >
-              <el-icon :size="16" :color="category.color">
+              <el-icon :size="14" :color="category.color">
                 <component :is="item.icon" />
               </el-icon>
               <span>{{ item.label }}</span>
@@ -44,219 +44,14 @@
 
 <script setup lang="ts">
 import { ElCard, ElDivider, ElSpace, ElTabs, ElTabPane, ElIcon } from 'element-plus'
-import { 
-  Cpu,
-  DataLine, 
-  Monitor,
-  Setting,
-  Link
-} from '@element-plus/icons-vue'
 import { ref } from 'vue'
-
-interface ConnectionPoint {
-  id: string
-  name: string
-}
-
-interface PaletteItem {
-  type: string
-  label: string
-  icon: any
-  category: string
-  inputs: ConnectionPoint[]
-  outputs: ConnectionPoint[]
-  description?: string
-}
-
-interface Category {
-  key: string
-  label: string
-  icon: any
-  color: string
-  items: PaletteItem[]
-}
+import { loadDeviceTreeComponents } from '@/utils/componentLoader'
+import type { PaletteItem } from '@/types/deviceTree'
 
 const activeCategory = ref('soc')
 
-const categories: Category[] = [
-  {
-    key: 'soc',
-    label: 'SOC',
-    icon: Cpu,
-    color: '#409eff',
-    items: [
-      {
-        type: 'soc-main',
-        label: '主SOC',
-        icon: Cpu,
-        category: 'soc',
-        inputs: [],
-        outputs: [
-          { id: 'cpu-bus', name: 'CPU总线' },
-          { id: 'memory-bus', name: '内存总线' },
-          { id: 'peripheral-bus', name: '外设总线' }
-        ],
-        description: '系统级芯片主控制器'
-      },
-      {
-        type: 'soc-cpu',
-        label: 'CPU核心',
-        icon: Cpu,
-        category: 'soc',
-        inputs: [{ id: 'cpu-bus', name: 'CPU总线' }],
-        outputs: [],
-        description: '中央处理器核心'
-      }
-    ]
-  },
-  {
-    key: 'cpu',
-    label: 'CPU',
-    icon: Setting,
-    color: '#67c23a',
-    items: [
-      {
-        type: 'cpu-arm',
-        label: 'ARM核心',
-        icon: Setting,
-        category: 'cpu',
-        inputs: [{ id: 'cpu-bus', name: 'CPU总线' }],
-        outputs: [
-          { id: 'cache', name: '缓存' },
-          { id: 'mmu', name: 'MMU' }
-        ],
-        description: 'ARM架构处理器核心'
-      },
-      {
-        type: 'cpu-riscv',
-        label: 'RISC-V核心',
-        icon: Setting,
-        category: 'cpu',
-        inputs: [{ id: 'cpu-bus', name: 'CPU总线' }],
-        outputs: [
-          { id: 'cache', name: '缓存' },
-          { id: 'mmu', name: 'MMU' }
-        ],
-        description: 'RISC-V架构处理器核心'
-      }
-    ]
-  },
-     
-  {
-    key: 'channel',
-    label: '通道',
-    icon: DataLine,
-    color: '#f56c6c',
-    items: [
-      {
-        type: 'i2c-channel',
-        label: 'I2C通道',
-        icon: DataLine,
-        category: 'channel',
-        inputs: [{ id: 'i2c-bus', name: 'I2C总线' }],
-        outputs: [
-          { id: 'sda', name: 'SDA' },
-          { id: 'scl', name: 'SCL' }
-        ],
-        description: 'I2C通信通道'
-      },
-      {
-        type: 'spi-channel',
-        label: 'SPI通道',
-        icon: DataLine,
-        category: 'channel',
-        inputs: [{ id: 'spi-bus', name: 'SPI总线' }],
-        outputs: [
-          { id: 'mosi', name: 'MOSI' },
-          { id: 'miso', name: 'MISO' },
-          { id: 'sclk', name: 'SCLK' },
-          { id: 'cs', name: 'CS' }
-        ],
-        description: 'SPI通信通道'
-      },
-      {
-        type: 'uart-channel',
-        label: 'UART通道',
-        icon: DataLine,
-        category: 'channel',
-        inputs: [{ id: 'uart-bus', name: 'UART总线' }],
-        outputs: [
-          { id: 'tx', name: 'TX' },
-          { id: 'rx', name: 'RX' }
-        ],
-        description: 'UART串口通道'
-      }
-    ]
-  },
-  {
-    key: 'sensor',
-    label: '传感器',
-    icon: Monitor,
-    color: '#909399',
-    items: [
-      {
-        type: 'sensor-temp',
-        label: '温度传感器',
-        icon: Monitor,
-        category: 'sensor',
-        inputs: [
-          { id: 'i2c-bus', name: 'I2C总线' },
-          { id: 'power', name: '电源' }
-        ],
-        outputs: [
-          { id: 'data', name: '数据' },
-          { id: 'interrupt', name: '中断' }
-        ],
-        description: '温度测量传感器'
-      },
-      {
-        type: 'sensor-humidity',
-        label: '湿度传感器',
-        icon: Monitor,
-        category: 'sensor',
-        inputs: [
-          { id: 'i2c-bus', name: 'I2C总线' },
-          { id: 'power', name: '电源' }
-        ],
-        outputs: [
-          { id: 'data', name: '数据' },
-          { id: 'interrupt', name: '中断' }
-        ],
-        description: '湿度测量传感器'
-      },
-      {
-        type: 'sensor-pressure',
-        label: '压力传感器',
-        icon: Monitor,
-        category: 'sensor',
-        inputs: [
-          { id: 'i2c-bus', name: 'I2C总线' },
-          { id: 'power', name: '电源' }
-        ],
-        outputs: [
-          { id: 'data', name: '数据' },
-          { id: 'interrupt', name: '中断' }
-        ],
-        description: '压力测量传感器'
-      },
-      {
-        type: 'sensor-accelerometer',
-        label: '加速度计',
-        icon: Monitor,
-        category: 'sensor',
-        inputs: [
-          { id: 'i2c-bus', name: 'I2C总线' },
-          { id: 'power', name: '电源' }
-        ],
-        outputs: [
-          { id: 'data', name: '数据' },
-          { id: 'interrupt', name: '中断' }
-        ],
-        description: '三轴加速度传感器'
-      }
-    ]
-  }
-]
+// 从配置文件加载组件数据
+const categories = loadDeviceTreeComponents()
 
 function onDragStart(item: PaletteItem, e: DragEvent) {
   if (e.dataTransfer) {
@@ -294,135 +89,196 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
     dragPreview.appendChild(text)
     
     document.body.appendChild(dragPreview)
+    
+    // 设置拖拽图片
     e.dataTransfer.setDragImage(dragPreview, 50, 20)
-    // 拖拽结束后移除
-    setTimeout(() => document.body.removeChild(dragPreview), 0)
+    
+    // 清理拖拽预览
+    setTimeout(() => {
+      if (document.body.contains(dragPreview)) {
+        document.body.removeChild(dragPreview)
+      }
+    }, 0)
   }
 }
 </script>
 
 <style scoped>
 .palette-list {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 0;
+  width: 100%;
+  height: 50%;
+  min-height: 250px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .palette-title {
-  font-weight: bold;
-  margin-bottom: 0;
-  font-size: 16px;
-  padding: 8px 0 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  text-align: center;
+  padding: 8px 0 4px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .palette-tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  height: calc(100% - 40px);
+}
+
+.palette-tabs :deep(.el-tabs__header) {
+  margin: 0;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.palette-tabs :deep(.el-tabs__nav-wrap) {
+  padding: 0 16px;
+}
+
+.palette-tabs :deep(.el-tabs__item) {
+  padding: 0 8px;
+  height: 32px;
+  line-height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6c757d;
+  border: none;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.palette-tabs :deep(.el-tabs__item:hover) {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.05);
+}
+
+.palette-tabs :deep(.el-tabs__item.is-active) {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.1);
+  border-bottom: 2px solid #409eff;
 }
 
 .palette-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  overflow-y: auto;
+  height: calc(100% - 32px);
+  padding: 0;
 }
 
 .palette-tabs :deep(.el-tab-pane) {
   height: 100%;
+  overflow-y: auto;
 }
 
 .category-content {
+  padding: 8px;
   height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .category-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e1e5e9;
 }
 
 .category-title {
+  font-size: 12px;
   font-weight: 600;
-  font-size: 14px;
-  color: #333;
+  color: #2c3e50;
 }
 
 .items-container {
-  flex: 1;
-  overflow-y: auto;
+  width: 100%;
 }
 
 .palette-item {
   cursor: grab;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  background: #ffffff;
   user-select: none;
-  font-size: 13px;
-  transition: all 0.2s ease;
-  margin-bottom: 0;
-  border: 1px solid transparent;
 }
 
 .palette-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #409eff;
+}
+
+.palette-item:active {
+  cursor: grabbing;
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* 不同分类的样式 */
 .palette-item-soc {
-  border-left: 3px solid #409eff;
+  border-left: 4px solid #409eff;
+}
+
+.palette-item-soc:hover {
+  border-left-color: #1976d2;
+  box-shadow: 0 8px 25px rgba(64, 158, 255, 0.2);
 }
 
 .palette-item-cpu {
-  border-left: 3px solid #67c23a;
+  border-left: 4px solid #67c23a;
+}
+
+.palette-item-cpu:hover {
+  border-left-color: #4caf50;
+  box-shadow: 0 8px 25px rgba(103, 194, 58, 0.2);
 }
 
 .palette-item-i2c-bridge {
-  border-left: 3px solid #e6a23c;
+  border-left: 4px solid #e6a23c;
+}
+
+.palette-item-i2c-bridge:hover {
+  border-left-color: #ff9800;
+  box-shadow: 0 8px 25px rgba(230, 162, 60, 0.2);
 }
 
 .palette-item-channel {
-  border-left: 3px solid #f56c6c;
+  border-left: 4px solid #f56c6c;
+}
+
+.palette-item-channel:hover {
+  border-left-color: #f44336;
+  box-shadow: 0 8px 25px rgba(245, 108, 108, 0.2);
 }
 
 .palette-item-sensor {
-  border-left: 3px solid #909399;
+  border-left: 4px solid #909399;
 }
 
-.palette-item:hover {
-  border-color: currentColor;
+.palette-item-sensor:hover {
+  border-left-color: #607d8b;
+  box-shadow: 0 8px 25px rgba(144, 147, 153, 0.2);
 }
 
-/* 标签页样式优化 */
-.palette-tabs :deep(.el-tabs__header) {
-  margin: 0 0 12px 0;
+/* 滚动条样式 */
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar {
+  width: 6px;
 }
 
-.palette-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 0;
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
-.palette-tabs :deep(.el-tabs__item) {
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 500;
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 
-.palette-tabs :deep(.el-tabs__item.is-active) {
-  color: #409eff;
-  font-weight: 600;
-}
-
-.palette-tabs :deep(.el-tabs__active-bar) {
-  background-color: #409eff;
-}
-
-@keyframes node-create {
-  0% { transform: scale(0) rotate(180deg); opacity: 0; }
-  50% { transform: scale(1.1) rotate(90deg); opacity: 0.8; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>
