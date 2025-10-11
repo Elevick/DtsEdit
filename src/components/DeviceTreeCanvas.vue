@@ -18,13 +18,38 @@
         </linearGradient>
       </defs>
       
+      <!-- 透明背景，用于处理空白区域点击 -->
+      <rect width="100%" height="100%" fill="transparent" @click="clearSelection" class="canvas-background" />
+      
       <!-- 连接线 -->
-      <path v-for="connection in connections" :key="connection.id"
-        :d="connection.path"
-        class="connection-path"
-        :class="{ 'connection-selected': selectedConnectionId === connection.id }"
-        @click="selectConnection(connection.id)"
-      />
+      <g v-for="connection in connections" :key="connection.id">
+        <path :d="connection.path"
+          class="connection-path"
+          :class="{ 'connection-selected': selectedConnectionId === connection.id }"
+          @click.stop="selectConnection(connection.id)"
+        />
+        <!-- 连接线删除按钮 -->
+        <g v-if="selectedConnectionId === connection.id" class="connection-delete-btn">
+          <circle :cx="getConnectionMidpoint(connection).x" 
+                  :cy="getConnectionMidpoint(connection).y" 
+                  r="12" 
+                  fill="#f56c6c" 
+                  stroke="#fff" 
+                  stroke-width="2"
+                  class="delete-btn-bg"
+                  @click.stop="deleteConnection(connection.id)"
+          />
+          <text :x="getConnectionMidpoint(connection).x" 
+                :y="getConnectionMidpoint(connection).y + 4" 
+                text-anchor="middle" 
+                fill="#fff" 
+                font-size="12" 
+                font-weight="bold"
+                class="delete-btn-text"
+                @click.stop="deleteConnection(connection.id)"
+          >×</text>
+        </g>
+      </g>
       
       <!-- 临时连接线 -->
       <path v-if="tempConnectionPath" :d="tempConnectionPath" class="temp-connection-path" />
@@ -175,6 +200,41 @@ function clearSelection() {
 function selectConnection(connectionId: string) {
   selectedConnectionId.value = connectionId
   selectedNodeId.value = null
+}
+
+// 获取连接线中点坐标
+function getConnectionMidpoint(connection: Connection) {
+  const sourceNode = nodes.value.find(n => n.id === connection.sourceId)
+  const targetNode = nodes.value.find(n => n.id === connection.targetId)
+  
+  if (sourceNode && targetNode) {
+    const outputIndex = sourceNode.outputs.findIndex(o => o.id === connection.sourcePointId)
+    const inputIndex = targetNode.inputs.findIndex(i => i.id === connection.targetPointId)
+    
+    if (outputIndex !== -1 && inputIndex !== -1) {
+      const sourceX = sourceNode.x + 140 + 8
+      const sourceY = sourceNode.y + 30 + outputIndex * 25 + 8
+      const targetX = targetNode.x - 8
+      const targetY = targetNode.y + 30 + inputIndex * 25 + 8
+      
+      return {
+        x: (sourceX + targetX) / 2,
+        y: (sourceY + targetY) / 2
+      }
+    }
+  }
+  
+  return { x: 0, y: 0 }
+}
+
+// 删除连接线
+function deleteConnection(connectionId: string) {
+  const index = connections.value.findIndex(conn => conn.id === connectionId)
+  if (index > -1) {
+    connections.value.splice(index, 1)
+    selectedConnectionId.value = null
+    updateConnections()
+  }
 }
 
 // 获取节点颜色
@@ -691,6 +751,26 @@ function onCanvasMouseUp() {
   window.removeEventListener('mouseup', onCanvasMouseUp)
 }
 
+// 键盘事件处理
+function onKeyDown(e: KeyboardEvent) {
+  // 删除键删除选中的连接线或节点
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedConnectionId.value) {
+      deleteConnection(selectedConnectionId.value)
+    } else if (selectedNodeId.value) {
+      deleteNode(selectedNodeId.value)
+    }
+  }
+  // ESC键清除选择
+  else if (e.key === 'Escape') {
+    clearSelection()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+})
+
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
@@ -698,6 +778,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseup', onConnectionEnd)
   window.removeEventListener('mousemove', onCanvasMouseMove)
   window.removeEventListener('mouseup', onCanvasMouseUp)
+  window.removeEventListener('keydown', onKeyDown)
 })
 
 const emit = defineEmits(['selectNode', 'nodesChange', 'connectionsChange'])
@@ -752,7 +833,6 @@ watch(connections, (newConnections) => {
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
   z-index: 1;
 }
 
@@ -764,30 +844,26 @@ watch(connections, (newConnections) => {
   stroke-linejoin: round;
   filter: url(#connection-shadow);
   cursor: pointer;
-  transition: all 0.3s ease;
   stroke-dasharray: none;
+  pointer-events: all;
 }
 
 .connection-path:hover {
-  stroke-width: 4px;
-  filter: url(#connection-shadow) brightness(1.2);
+  stroke-width: 5px;
   stroke: #409eff;
+  filter: url(#connection-shadow) brightness(1.1);
 }
 
 .connection-selected {
   stroke: #e6a23c !important;
-  stroke-width: 4px !important;
-  filter: url(#connection-shadow) brightness(1.3) !important;
-  animation: connection-pulse 2s infinite;
+  stroke-width: 5px !important;
+  filter: url(#connection-shadow) brightness(1.2) !important;
 }
 
-@keyframes connection-pulse {
-  0%, 100% {
-    stroke-opacity: 1;
-  }
-  50% {
-    stroke-opacity: 0.6;
-  }
+.connection-selected:hover {
+  stroke: #e6a23c !important;
+  stroke-width: 6px !important;
+  filter: url(#connection-shadow) brightness(1.3) !important;
 }
 
 .temp-connection-path {
@@ -796,10 +872,10 @@ watch(connections, (newConnections) => {
   stroke-width: 3px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-opacity: 0.8;
-  stroke-dasharray: 8, 4;
-  animation: temp-connection-dash 1s linear infinite;
-  filter: drop-shadow(0 2px 4px rgba(64, 158, 255, 0.3));
+  stroke-opacity: 0.9;
+  stroke-dasharray: 10, 6;
+  animation: temp-connection-dash 1.2s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(64, 158, 255, 0.4));
 }
 
 @keyframes temp-connection-dash {
@@ -807,7 +883,7 @@ watch(connections, (newConnections) => {
     stroke-dashoffset: 0;
   }
   100% {
-    stroke-dashoffset: 12;
+    stroke-dashoffset: 16;
   }
 }
 
@@ -1213,5 +1289,31 @@ watch(connections, (newConnections) => {
 
 .canvas-grabbing {
   cursor: grabbing !important;
+}
+
+/* 连接线删除按钮样式 */
+.connection-delete-btn {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.delete-btn-bg {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(245, 108, 108, 0.3));
+}
+
+.delete-btn-bg:hover {
+  r: 14;
+  filter: drop-shadow(0 4px 8px rgba(245, 108, 108, 0.5));
+}
+
+.delete-btn-text {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 画布背景样式 */
+.canvas-background {
+  cursor: default;
 }
 </style>
