@@ -5,6 +5,30 @@
     @mousedown.self="onCanvasMouseDown"
     @click.self="clearSelection"
   >
+    <svg class="connections-layer">
+      <!-- 连接线阴影层 -->
+      <defs>
+        <filter id="connection-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(64, 158, 255, 0.3)"/>
+        </filter>
+        <linearGradient id="connection-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#409eff;stop-opacity:0.8" />
+          <stop offset="50%" style="stop-color:#67c23a;stop-opacity:0.9" />
+          <stop offset="100%" style="stop-color:#409eff;stop-opacity:0.8" />
+        </linearGradient>
+      </defs>
+      
+      <!-- 连接线 -->
+      <path v-for="connection in connections" :key="connection.id"
+        :d="connection.path"
+        class="connection-path"
+        :class="{ 'connection-selected': selectedConnectionId === connection.id }"
+        @click="selectConnection(connection.id)"
+      />
+      
+      <!-- 临时连接线 -->
+      <path v-if="tempConnectionPath" :d="tempConnectionPath" class="temp-connection-path" />
+    </svg>
     
     <div v-if="nodes.length === 0" class="canvas-placeholder">
       <div class="placeholder-content">
@@ -45,6 +69,31 @@
         <span class="label-type" v-if="node.type">{{ getNodeTypeLabel(node.type) }}</span>
       </div>
       
+      <!-- 输入点 -->
+      <div class="input-points">
+        <div v-for="(input, inputIdx) in node.inputs" :key="input.id"
+          class="input-point"
+          :class="{ 'connecting': isConnecting }"
+          :style="{ top: 30 + inputIdx * 25 + 'px' }"
+          :title="input.name"
+          @mousedown.stop="startConnectionFromInput(node, input, $event)"
+        >
+          <div class="point-inner"></div>
+        </div>
+      </div>
+      
+      <!-- 输出点 -->
+      <div class="output-points">
+        <div v-for="(output, outputIdx) in node.outputs" :key="output.id"
+          class="output-point"
+          :class="{ 'connecting': isConnecting }"
+          :style="{ top: 30 + outputIdx * 25 + 'px' }"
+          :title="output.name"
+          @mousedown.stop="startConnection(node, output, $event)"
+        >
+          <div class="point-inner"></div>
+        </div>
+      </div>
       
       <!-- 节点状态指示器 -->
       <div class="node-status" v-if="node.status">
@@ -77,6 +126,20 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 
+interface ConnectionPoint {
+  id: string
+  name: string
+}
+
+interface Connection {
+  id: string
+  sourceId: number
+  sourcePointId: string
+  targetId: number
+  targetPointId: string
+  path: string
+}
+
 interface CanvasNode {
   id: number
   type: string
@@ -85,6 +148,8 @@ interface CanvasNode {
   icon?: any
   x: number
   y: number
+  inputs: ConnectionPoint[]
+  outputs: ConnectionPoint[]
   status?: 'active' | 'inactive' | 'error'
   isNew?: boolean
 }
@@ -93,10 +158,22 @@ interface CanvasNode {
 const nodes = ref<CanvasNode[]>([])
 let nodeId = 1
 
+const connections = ref<Connection[]>([])
+const selectedConnectionId = ref<string | null>(null)
 const selectedNodeId = ref<number | null>(null)
+
+// 计算属性：是否正在连接
+const isConnecting = computed(() => connectingNode !== null)
 
 // 清除选择
 function clearSelection() {
+  selectedNodeId.value = null
+  selectedConnectionId.value = null
+}
+
+// 选择连接线
+function selectConnection(connectionId: string) {
+  selectedConnectionId.value = connectionId
   selectedNodeId.value = null
 }
 
@@ -152,11 +229,58 @@ function deleteNode(nodeId: number) {
   const index = nodes.value.findIndex(n => n.id === nodeId)
   if (index > -1) {
     nodes.value.splice(index, 1)
+    // 删除相关连接
+    connections.value = connections.value.filter(conn => 
+      conn.sourceId !== nodeId && conn.targetId !== nodeId
+    )
+    updateConnections()
     selectedNodeId.value = null
   }
 }
 
+// 计算连接线路径
+function updateConnectionPaths() {
+  connections.value.forEach(connection => {
+    const sourceNode = nodes.value.find(n => n.id === connection.sourceId)
+    const targetNode = nodes.value.find(n => n.id === connection.targetId)
+    
+    if (sourceNode && targetNode) {
+      // 找到对应的输出点和输入点
+      const outputIndex = sourceNode.outputs.findIndex(o => o.id === connection.sourcePointId)
+      const inputIndex = targetNode.inputs.findIndex(i => i.id === connection.targetPointId)
+      
+      if (outputIndex !== -1 && inputIndex !== -1) {
+        // 计算连接线的起点和终点 - 精确对齐到连接点中心
+        const sourceX = sourceNode.x + 140 + 8 // 节点右侧 + 输出点偏移
+        const sourceY = sourceNode.y + 30 + outputIndex * 25 + 8 // 连接点中心Y坐标（30是节点中心偏移，8是连接点半径）
+        
+        // 输入点位于节点左侧
+        const targetX = targetNode.x - 8 // 节点左侧 + 输入点偏移
+        const targetY = targetNode.y + 30 + inputIndex * 25 + 8 // 连接点中心Y坐标
+        
+        // 创建贝塞尔曲线路径
+        const controlPoint1X = sourceX + 50
+        const controlPoint1Y = sourceY
+        const controlPoint2X = targetX - 50
+        const controlPoint2Y = targetY
+        
+        connection.path = `M ${sourceX},${sourceY} C ${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${targetX},${targetY}`
+      }
+    }
+  })
+}
 
+// 更新连接线
+function updateConnections() {
+  updateConnectionPaths()
+}
+
+// 连接操作相关变量
+let connectingNode: CanvasNode | null = null
+let connectingOutputPoint: ConnectionPoint | null = null
+let connectingInputPoint: ConnectionPoint | null = null
+let isConnectingFromInput = false // 标记是否从输入点开始连接
+let tempConnectionPath = ref('')
 
 function onDrop(e: DragEvent) {
   if (e.dataTransfer) {
@@ -172,6 +296,30 @@ function onDrop(e: DragEvent) {
       
       console.log('Drop position:', { x, y, clientX: e.clientX, clientY: e.clientY, rectLeft: rect.left, rectTop: rect.top })
       
+      // 使用从调色板拖拽过来的元件自带的输入输出点信息
+      const inputs: ConnectionPoint[] = []
+      const outputs: ConnectionPoint[] = []
+      
+      // 复制输入点，并为每个点生成唯一ID
+      if (item.inputs && Array.isArray(item.inputs)) {
+        item.inputs.forEach((input: { id: string; name: string }, index: number) => {
+          inputs.push({
+            id: `in-${index}-${nodeId}`,
+            name: input.name
+          })
+        })
+      }
+      
+      // 复制输出点，并为每个点生成唯一ID
+      if (item.outputs && Array.isArray(item.outputs)) {
+        item.outputs.forEach((output: { id: string; name: string }, index: number) => {
+          outputs.push({
+            id: `out-${index}-${nodeId}`,
+            name: output.name
+          })
+        })
+      }
+      
       const newNode: CanvasNode = {
         id: nodeId++,
         type: item.type,
@@ -180,6 +328,8 @@ function onDrop(e: DragEvent) {
         icon: item.icon,
         x: x - 70, // 节点宽度的一半 (140/2)
         y: y - 30, // 节点高度的一半 (60/2)
+        inputs,
+        outputs,
         status: 'active',
         isNew: true
       }
@@ -199,6 +349,228 @@ function onDrop(e: DragEvent) {
       }, 10)
     }
   }
+}
+
+// 开始从输出点创建连接
+function startConnection(node: CanvasNode, outputPoint: ConnectionPoint, e: MouseEvent) {
+  e.stopPropagation()
+  connectingNode = node
+  connectingOutputPoint = outputPoint
+  connectingInputPoint = null
+  isConnectingFromInput = false
+  window.addEventListener('mousemove', onConnectionMove)
+  window.addEventListener('mouseup', onConnectionEnd)
+}
+
+// 开始从输入点创建连接
+function startConnectionFromInput(node: CanvasNode, inputPoint: ConnectionPoint, e: MouseEvent) {
+  e.stopPropagation()
+  connectingNode = node
+  connectingInputPoint = inputPoint
+  connectingOutputPoint = null
+  isConnectingFromInput = true
+  window.addEventListener('mousemove', onConnectionMove)
+  window.addEventListener('mouseup', onConnectionEnd)
+}
+
+// 连接线移动
+function onConnectionMove(e: MouseEvent) {
+  if (!connectingNode) return
+  
+  const canvas = document.querySelector('.canvas-area') as HTMLElement
+  const rect = canvas.getBoundingClientRect()
+  const mouseX = e.clientX - rect.left
+  const mouseY = e.clientY - rect.top
+  
+  let sourceX, sourceY, targetX, targetY
+  
+  if (isConnectingFromInput && connectingInputPoint) {
+    // 从输入点开始连接
+    const inputIndex = connectingNode.inputs.findIndex(i => i.id === connectingInputPoint!.id)
+    if (inputIndex === -1) return
+    
+    sourceX = connectingNode.x - 8 // 节点左侧 + 输入点偏移
+    sourceY = connectingNode.y + 30 + inputIndex * 25 + 8 // 连接点中心Y坐标
+    targetX = mouseX
+    targetY = mouseY
+  } else if (connectingOutputPoint) {
+    // 从输出点开始连接
+    const outputIndex = connectingNode.outputs.findIndex(o => o.id === connectingOutputPoint!.id)
+    if (outputIndex === -1) return
+    
+    sourceX = connectingNode.x + 140 + 8 // 节点右侧 + 输出点偏移
+    sourceY = connectingNode.y + 30 + outputIndex * 25 + 8 // 连接点中心Y坐标
+    targetX = mouseX
+    targetY = mouseY
+  } else {
+    return
+  }
+  
+  // 检查是否有可连接的目标点，如果有则吸附到目标点
+  let snapTarget = null
+  let snapX = targetX
+  let snapY = targetY
+  
+  if (isConnectingFromInput && connectingInputPoint && connectingNode) {
+    // 从输入点开始连接，寻找输出点
+    for (const targetNode of nodes.value) {
+      if (targetNode.id === connectingNode.id) continue
+      
+      for (let i = 0; i < targetNode.outputs.length; i++) {
+        const outputPointY = targetNode.y + 30 + i * 25 + 8 // 连接点中心Y坐标
+        const outputPointX = targetNode.x + 140 + 8
+        
+        // 检查是否在吸附范围内
+        const distance = Math.sqrt(Math.pow(mouseX - outputPointX, 2) + Math.pow(mouseY - outputPointY, 2))
+        if (distance < 20) { // 20像素吸附范围
+          snapTarget = { node: targetNode, point: targetNode.outputs[i], x: outputPointX, y: outputPointY }
+          snapX = outputPointX
+          snapY = outputPointY
+          break
+        }
+      }
+      if (snapTarget) break
+    }
+  } else if (connectingOutputPoint && connectingNode) {
+    // 从输出点开始连接，寻找输入点
+    for (const targetNode of nodes.value) {
+      if (targetNode.id === connectingNode.id) continue
+      
+      for (let i = 0; i < targetNode.inputs.length; i++) {
+        const inputPointY = targetNode.y + 30 + i * 25 + 8 // 连接点中心Y坐标
+        const inputPointX = targetNode.x - 8
+        
+        // 检查是否在吸附范围内
+        const distance = Math.sqrt(Math.pow(mouseX - inputPointX, 2) + Math.pow(mouseY - inputPointY, 2))
+        if (distance < 20) { // 20像素吸附范围
+          snapTarget = { node: targetNode, point: targetNode.inputs[i], x: inputPointX, y: inputPointY }
+          snapX = inputPointX
+          snapY = inputPointY
+          break
+        }
+      }
+      if (snapTarget) break
+    }
+  }
+  
+  // 创建贝塞尔曲线路径
+  const controlPoint1X = isConnectingFromInput ? sourceX - 50 : sourceX + 50
+  const controlPoint1Y = sourceY
+  const controlPoint2X = isConnectingFromInput ? snapX + 50 : snapX - 50
+  const controlPoint2Y = snapY
+  
+  tempConnectionPath.value = `M ${sourceX},${sourceY} C ${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${snapX},${snapY}`
+}
+
+// 结束连接创建
+function onConnectionEnd(e: MouseEvent) {
+  if (!connectingNode) return
+  
+  const canvas = document.querySelector('.canvas-area') as HTMLElement
+  const rect = canvas.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  
+  let connectionCreated = false
+  
+  if (isConnectingFromInput && connectingInputPoint && connectingNode) {
+     // 从输入点开始连接，寻找输出点
+     for (const targetNode of nodes.value) {
+       if (targetNode.id === connectingNode.id) continue // 不能连接到自己
+       
+       // 检查是否点击在目标节点的输出点上
+       for (let i = 0; i < targetNode.outputs.length; i++) {
+         const outputPointY = targetNode.y + 30 + i * 25 + 8 // 连接点中心Y坐标
+         const outputPointX = targetNode.x + 140 + 8 // 输出点X坐标
+         
+         // 使用距离检测，更宽松的条件
+         const distance = Math.sqrt(Math.pow(x - outputPointX, 2) + Math.pow(y - outputPointY, 2))
+         if (distance < 25) { // 25像素检测范围
+           
+           // 创建新的连接
+           const newConnection: Connection = {
+             id: `${targetNode.id}-${targetNode.outputs[i].id}-${connectingNode!.id}-${connectingInputPoint!.id}`,
+             sourceId: targetNode.id,
+             sourcePointId: targetNode.outputs[i].id,
+             targetId: connectingNode!.id,
+             targetPointId: connectingInputPoint!.id,
+             path: ''
+           }
+           
+           // 检查是否已存在相同的连接
+           const existingConnection = connections.value.find(conn => 
+             conn.targetId === connectingNode!.id && conn.targetPointId === connectingInputPoint!.id
+           )
+           
+           // 如果已存在连接到该输入点的连接，则替换它
+           if (existingConnection) {
+             const index = connections.value.indexOf(existingConnection)
+             connections.value.splice(index, 1, newConnection)
+           } else {
+             connections.value.push(newConnection)
+           }
+           
+           updateConnections()
+           connectionCreated = true
+           break
+         }
+       }
+       if (connectionCreated) break
+     }
+   } else if (connectingOutputPoint && connectingNode) {
+    // 从输出点开始连接，寻找输入点
+    for (const targetNode of nodes.value) {
+      if (targetNode.id === connectingNode.id) continue // 不能连接到自己
+      
+      // 检查是否点击在目标节点的输入点上
+      for (let i = 0; i < targetNode.inputs.length; i++) {
+        const inputPointY = targetNode.y + 30 + i * 25 + 8 // 连接点中心Y坐标
+        const inputPointX = targetNode.x - 8 // 输入点X坐标
+        
+        // 使用距离检测，更宽松的条件
+        const distance = Math.sqrt(Math.pow(x - inputPointX, 2) + Math.pow(y - inputPointY, 2))
+        if (distance < 25) { // 25像素检测范围
+          
+          // 创建新的连接
+          const newConnection: Connection = {
+            id: `${connectingNode.id}-${connectingOutputPoint.id}-${targetNode.id}-${targetNode.inputs[i].id}`,
+            sourceId: connectingNode.id,
+            sourcePointId: connectingOutputPoint.id,
+            targetId: targetNode.id,
+            targetPointId: targetNode.inputs[i].id,
+            path: ''
+          }
+          
+          // 检查是否已存在相同的连接
+          const existingConnection = connections.value.find(conn => 
+            conn.targetId === targetNode.id && conn.targetPointId === targetNode.inputs[i].id
+          )
+          
+          // 如果已存在连接到该输入点的连接，则替换它
+          if (existingConnection) {
+            const index = connections.value.indexOf(existingConnection)
+            connections.value.splice(index, 1, newConnection)
+          } else {
+            connections.value.push(newConnection)
+          }
+          
+          updateConnections()
+          connectionCreated = true
+          break
+        }
+      }
+      if (connectionCreated) break
+    }
+  }
+  
+  // 清理连接状态
+  connectingNode = null
+  connectingOutputPoint = null
+  connectingInputPoint = null
+  isConnectingFromInput = false
+  tempConnectionPath.value = ''
+  window.removeEventListener('mousemove', onConnectionMove)
+  window.removeEventListener('mouseup', onConnectionEnd)
 }
 
 // 节点拖动逻辑
@@ -275,6 +647,9 @@ function onMouseMove(e: MouseEvent) {
       
       nodes.value[draggingIdx].x = Math.max(minX, Math.min(newX, maxX))
       nodes.value[draggingIdx].y = Math.max(minY, Math.min(newY, maxY))
+      
+      // 更新连接线
+      updateConnections()
     }
   }
 }
@@ -303,6 +678,9 @@ function onCanvasMouseMove(e: MouseEvent) {
       node.x += deltaX
       node.y += deltaY
     })
+    
+    // 更新连接线
+    updateConnections()
   }
 }
 
@@ -316,19 +694,27 @@ function onCanvasMouseUp() {
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
+  window.removeEventListener('mousemove', onConnectionMove)
+  window.removeEventListener('mouseup', onConnectionEnd)
   window.removeEventListener('mousemove', onCanvasMouseMove)
   window.removeEventListener('mouseup', onCanvasMouseUp)
 })
 
-const emit = defineEmits(['selectNode', 'nodesChange'])
+const emit = defineEmits(['selectNode', 'nodesChange', 'connectionsChange'])
 function emitSelectNode(node: any) {
   selectedNodeId.value = node.id
+  selectedConnectionId.value = null
   emit('selectNode', node)
 }
 
 // 监听节点变化并通知父组件
 watch(nodes, (newNodes) => {
   emit('nodesChange', newNodes)
+}, { deep: true })
+
+// 监听连接变化并通知父组件
+watch(connections, (newConnections) => {
+  emit('connectionsChange', newConnections)
 }, { deep: true })
 </script>
 
@@ -359,6 +745,71 @@ watch(nodes, (newNodes) => {
   height: 100%;
 }
 
+/* 确保连接线层正确定位 */
+.connections-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connection-path {
+  fill: none;
+  stroke: url(#connection-gradient);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#connection-shadow);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  stroke-dasharray: none;
+}
+
+.connection-path:hover {
+  stroke-width: 4px;
+  filter: url(#connection-shadow) brightness(1.2);
+  stroke: #409eff;
+}
+
+.connection-selected {
+  stroke: #e6a23c !important;
+  stroke-width: 4px !important;
+  filter: url(#connection-shadow) brightness(1.3) !important;
+  animation: connection-pulse 2s infinite;
+}
+
+@keyframes connection-pulse {
+  0%, 100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.6;
+  }
+}
+
+.temp-connection-path {
+  fill: none;
+  stroke: #409eff;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.8;
+  stroke-dasharray: 8, 4;
+  animation: temp-connection-dash 1s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(64, 158, 255, 0.3));
+}
+
+@keyframes temp-connection-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 12;
+  }
+}
 
 .canvas-placeholder {
   color: #b3b3b3;
@@ -567,6 +1018,127 @@ watch(nodes, (newNodes) => {
   border-radius: 10px;
 }
 
+.input-points {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 12px;
+}
+
+.input-point {
+  position: absolute;
+  left: -8px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 3px solid #409eff;
+  border-radius: 50%;
+  cursor: crosshair;
+  z-index: 4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-point:hover {
+  transform: scale(1.8);
+  background: #409eff;
+  box-shadow: 0 8px 25px rgba(64, 158, 255, 0.6);
+  border-color: #fff;
+  z-index: 10;
+}
+
+.input-point:active {
+  transform: scale(1.6);
+  background: #67c23a;
+  border-color: #fff;
+}
+
+.input-point.connecting {
+  animation: connection-pulse 1s infinite;
+  box-shadow: 0 0 0 4px rgba(64, 158, 255, 0.3);
+}
+
+.input-point.connecting:hover {
+  animation: none;
+  transform: scale(2);
+  box-shadow: 0 0 0 6px rgba(64, 158, 255, 0.5);
+}
+
+.point-inner {
+  width: 6px;
+  height: 6px;
+  background: #409eff;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.input-point:hover .point-inner {
+  opacity: 1;
+  background: #fff;
+}
+
+.output-points {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 12px;
+}
+
+.output-point {
+  position: absolute;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: #409eff;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  cursor: crosshair;
+  z-index: 4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.output-point:hover {
+  transform: scale(1.8);
+  background: #67c23a;
+  box-shadow: 0 8px 25px rgba(103, 194, 58, 0.6);
+  border-color: #fff;
+  z-index: 10;
+}
+
+.output-point:active {
+  transform: scale(1.6);
+  background: #e6a23c;
+  border-color: #fff;
+}
+
+.output-point.connecting {
+  animation: connection-pulse 1s infinite;
+  box-shadow: 0 0 0 4px rgba(103, 194, 58, 0.3);
+}
+
+.output-point.connecting:hover {
+  animation: none;
+  transform: scale(2);
+  box-shadow: 0 0 0 6px rgba(103, 194, 58, 0.5);
+}
+
+.output-point .point-inner {
+  background: #67c23a;
+}
+
+.output-point:hover .point-inner {
+  background: #fff;
+}
 
 .node-status {
   position: absolute;
