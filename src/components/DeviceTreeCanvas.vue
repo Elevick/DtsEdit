@@ -75,6 +75,8 @@
       ]"
       :style="{ left: node.x + 'px', top: node.y + 'px' }"
       :data-node-id="node.id"
+      :data-inputs="node.inputs.length"
+      :data-outputs="node.outputs.length"
       @mousedown="onNodeMouseDown(idx, $event)"
       @click.stop="emitSelectNode(node)"
     >
@@ -935,6 +937,17 @@ watch(connections, (newConnections) => {
   position: absolute;
   overflow: hidden;
 }
+
+/* 根据连接点数量动态调整节点高度 */
+.canvas-node[data-inputs="0"][data-outputs="1"] { min-height: 60px; }
+.canvas-node[data-inputs="0"][data-outputs="2"] { min-height: 85px; }
+.canvas-node[data-inputs="0"][data-outputs="3"] { min-height: 110px; }
+.canvas-node[data-inputs="0"][data-outputs="4"] { min-height: 135px; }
+.canvas-node[data-inputs="1"][data-outputs="0"] { min-height: 60px; }
+.canvas-node[data-inputs="1"][data-outputs="1"] { min-height: 85px; }
+.canvas-node[data-inputs="1"][data-outputs="2"] { min-height: 110px; }
+.canvas-node[data-inputs="1"][data-outputs="3"] { min-height: 135px; }
+.canvas-node[data-inputs="1"][data-outputs="4"] { min-height: 160px; }
 
 .canvas-node::before {
   content: '';

@@ -90,7 +90,7 @@ function onConnectionsChange(newConnections: Connection[]) {
   position: relative;
 }
 .palette {
-  width: 220px;
+  width: 280px;
   background: #f7f7f7;
   border-right: 1px solid #eee;
   padding: 8px 8px 0 0;

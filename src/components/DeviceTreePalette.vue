@@ -19,14 +19,14 @@
             <span class="category-title">{{ category.label }}</span>
           </div>
           
-          <el-space direction="vertical" fill class="items-container">
+          <div class="items-container">
             <el-card
               v-for="item in category.items"
               :key="item.type"
               class="palette-item"
               :class="`palette-item-${category.key}`"
               shadow="hover"
-              body-style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;"
+              body-style="padding: 8px 12px; display: flex; align-items: center; gap: 8px; height: 40px;"
               draggable="true"
               @dragstart="onDragStart(item, $event)"
             >
@@ -35,7 +35,7 @@
               </el-icon>
               <span>{{ item.label }}</span>
             </el-card>
-          </el-space>
+          </div>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ElCard, ElDivider, ElSpace, ElTabs, ElTabPane, ElIcon } from 'element-plus'
+import { ElCard, ElDivider, ElTabs, ElTabPane, ElIcon } from 'element-plus'
 import { ref } from 'vue'
 import { loadDeviceTreeComponents } from '@/utils/componentLoader'
 import type { PaletteItem } from '@/types/deviceTree'
@@ -108,10 +108,13 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
   width: 100%;
   height: 50%;
   min-height: 250px;
+  max-height: 50%;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   border: 1px solid #e1e5e9;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .palette-title {
@@ -127,7 +130,10 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
 }
 
 .palette-tabs {
-  height: calc(100% - 40px);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .palette-tabs :deep(.el-tabs__header) {
@@ -163,18 +169,25 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
 }
 
 .palette-tabs :deep(.el-tabs__content) {
-  height: calc(100% - 32px);
+  flex: 1;
+  min-height: 0;
   padding: 0;
 }
 
 .palette-tabs :deep(.el-tab-pane) {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .category-content {
   padding: 8px;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .category-header {
@@ -184,6 +197,7 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
   margin-bottom: 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid #e1e5e9;
+  flex-shrink: 0;
 }
 
 .category-title {
@@ -194,6 +208,16 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
 
 .items-container {
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 4px 16px 4px;
+  box-sizing: border-box;
 }
 
 .palette-item {
@@ -203,6 +227,11 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
   border-radius: 8px;
   background: #ffffff;
   user-select: none;
+  min-height: 40px;
+  max-height: 40px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .palette-item:hover {
@@ -264,21 +293,29 @@ function onDragStart(item: PaletteItem, e: DragEvent) {
 }
 
 /* 滚动条样式 */
-.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar {
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar,
+.category-content::-webkit-scrollbar,
+.items-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-track {
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-track,
+.category-content::-webkit-scrollbar-track,
+.items-container::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb {
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb,
+.category-content::-webkit-scrollbar-thumb,
+.items-container::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
-.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb:hover {
+.palette-tabs :deep(.el-tab-pane)::-webkit-scrollbar-thumb:hover,
+.category-content::-webkit-scrollbar-thumb:hover,
+.items-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 </style>
