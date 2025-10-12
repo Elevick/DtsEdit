@@ -6,6 +6,7 @@ import {
   Link
 } from '@element-plus/icons-vue'
 import type { Category, DeviceTreeComponentsConfig } from '@/types/deviceTree'
+import deviceTreeComponentsConfig from '@/config/deviceTreeComponents.json'
 
 // 图标映射
 const iconMap: Record<string, any> = {
@@ -20,9 +21,59 @@ const iconMap: Record<string, any> = {
  * 加载设备树组件配置
  */
 export function loadDeviceTreeComponents(): Category[] {
-  // 这里可以从JSON文件导入，或者从API获取
-  // 为了演示，我们直接返回配置数据
-  const config: DeviceTreeComponentsConfig = {
+  // 从JSON文件加载配置
+  const config = deviceTreeComponentsConfig as DeviceTreeComponentsConfig
+  
+  // 转换图标字符串为实际的图标组件
+  return config.categories.map(category => ({
+    ...category,
+    icon: iconMap[category.icon] || Cpu,
+    items: category.items.map(item => ({
+      ...item,
+      icon: iconMap[item.icon] || Cpu
+    }))
+  }))
+}
+
+/**
+ * 热重载配置（用于开发环境动态更新配置）
+ */
+export function reloadDeviceTreeComponents(): Category[] {
+  // 强制重新加载配置
+  return loadDeviceTreeComponents()
+}
+
+/**
+ * 根据类型获取组件配置
+ */
+export function getComponentByType(type: string) {
+  const categories = loadDeviceTreeComponents()
+  for (const category of categories) {
+    const item = category.items.find(item => item.type === type)
+    if (item) {
+      return item
+    }
+  }
+  return null
+}
+
+/**
+ * 获取所有组件类型
+ */
+export function getAllComponentTypes(): string[] {
+  const categories = loadDeviceTreeComponents()
+  const types: string[] = []
+  for (const category of categories) {
+    for (const item of category.items) {
+      types.push(item.type)
+    }
+  }
+  return types
+}
+
+// 以下是旧的硬编码配置（已废弃，保留作为参考）
+/*
+const hardcodedConfig: DeviceTreeComponentsConfig = {
     "categories": [
       {
         "key": "soc",
@@ -265,42 +316,4 @@ export function loadDeviceTreeComponents(): Category[] {
       }
     ]
   }
-
-  // 转换图标字符串为实际的图标组件
-  return config.categories.map(category => ({
-    ...category,
-    icon: iconMap[category.icon] || Cpu,
-    items: category.items.map(item => ({
-      ...item,
-      icon: iconMap[item.icon] || Cpu
-    }))
-  }))
-}
-
-/**
- * 根据类型获取组件配置
- */
-export function getComponentByType(type: string) {
-  const categories = loadDeviceTreeComponents()
-  for (const category of categories) {
-    const item = category.items.find(item => item.type === type)
-    if (item) {
-      return item
-    }
-  }
-  return null
-}
-
-/**
- * 获取所有组件类型
- */
-export function getAllComponentTypes(): string[] {
-  const categories = loadDeviceTreeComponents()
-  const types: string[] = []
-  for (const category of categories) {
-    for (const item of category.items) {
-      types.push(item.type)
-    }
-  }
-  return types
-}
+*/
