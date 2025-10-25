@@ -11,6 +11,10 @@ export interface PaletteItem {
   inputs: ConnectionPoint[]
   outputs: ConnectionPoint[]
   description?: string
+  compatible?: string
+  'address-cells'?: number
+  'size-cells'?: number
+  reg?: number
 }
 
 export interface Category {

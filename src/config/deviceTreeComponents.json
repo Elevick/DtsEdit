@@ -17,7 +17,11 @@
             { "id": "memory-bus", "name": "内存总线" },
             { "id": "peripheral-bus", "name": "外设总线" }
           ],
-          "description": "系统级芯片主控制器"
+          "description": "系统级芯片主控制器",
+          "compatible": "vendor,soc-main",
+          "address-cells": 2,
+          "size-cells": 2,
+          "reg": "0x0 0x0 0x0 0x0"
         },
         {
           "type": "soc-cpu",
@@ -28,7 +32,11 @@
             { "id": "cpu-bus", "name": "CPU总线" }
           ],
           "outputs": [],
-          "description": "中央处理器核心"
+          "description": "中央处理器核心",
+          "compatible": "vendor,cpu-core",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x0"
         },
         {
           "type": "soc-memory",
@@ -42,7 +50,11 @@
             { "id": "dram", "name": "DRAM" },
             { "id": "sram", "name": "SRAM" }
           ],
-          "description": "内存控制器"
+          "description": "内存控制器",
+          "compatible": "vendor,memory-controller",
+          "address-cells": 2,
+          "size-cells": 1,
+          "reg": "0x10000000 0x1000"
         }
       ]
     },
@@ -64,7 +76,11 @@
             { "id": "cache", "name": "缓存" },
             { "id": "mmu", "name": "MMU" }
           ],
-          "description": "ARM架构处理器核心"
+          "description": "ARM架构处理器核心",
+          "compatible": "arm,cortex-a53",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x0"
         },
         {
           "type": "cpu-riscv",
@@ -78,7 +94,11 @@
             { "id": "cache", "name": "缓存" },
             { "id": "mmu", "name": "MMU" }
           ],
-          "description": "RISC-V架构处理器核心"
+          "description": "RISC-V架构处理器核心",
+          "compatible": "riscv,rv64imac",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x0"
         }
       ]
     },
@@ -99,7 +119,11 @@
           "outputs": [
             { "id": "i2c-bus", "name": "I2C总线" }
           ],
-          "description": "I2C总线控制器"
+          "description": "I2C总线控制器",
+          "compatible": "vendor,i2c-controller",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x11000000 0x1000"
         },
         {
           "type": "i2c-mux",
@@ -115,7 +139,11 @@
             { "id": "i2c-channel-2", "name": "I2C通道2" },
             { "id": "i2c-channel-3", "name": "I2C通道3" }
           ],
-          "description": "I2C多路复用器"
+          "description": "I2C多路复用器",
+          "compatible": "nxp,pca9548",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x70"
         }
       ]
     },
@@ -137,7 +165,11 @@
             { "id": "sda", "name": "SDA" },
             { "id": "scl", "name": "SCL" }
           ],
-          "description": "I2C通信通道"
+          "description": "I2C通信通道",
+          "compatible": "vendor,i2c-channel",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x0"
         },
         {
           "type": "spi-channel",
@@ -153,7 +185,11 @@
             { "id": "sclk", "name": "SCLK" },
             { "id": "cs", "name": "CS" }
           ],
-          "description": "SPI通信通道"
+          "description": "SPI通信通道",
+          "compatible": "vendor,spi-channel",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x0"
         },
         {
           "type": "uart-channel",
@@ -167,7 +203,11 @@
             { "id": "tx", "name": "TX" },
             { "id": "rx", "name": "RX" }
           ],
-          "description": "UART串口通道"
+          "description": "UART串口通道",
+          "compatible": "vendor,uart-channel",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x12000000 0x1000"
         }
       ]
     },
@@ -190,7 +230,11 @@
             { "id": "data", "name": "数据" },
             { "id": "interrupt", "name": "中断" }
           ],
-          "description": "温度测量传感器"
+          "description": "温度测量传感器",
+          "compatible": "ti,tmp102",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x48"
         },
         {
           "type": "sensor-humidity",
@@ -205,7 +249,11 @@
             { "id": "data", "name": "数据" },
             { "id": "interrupt", "name": "中断" }
           ],
-          "description": "湿度测量传感器"
+          "description": "湿度测量传感器",
+          "compatible": "sensirion,sht21",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x40"
         },
         {
           "type": "sensor-pressure",
@@ -220,7 +268,11 @@
             { "id": "data", "name": "数据" },
             { "id": "interrupt", "name": "中断" }
           ],
-          "description": "压力测量传感器"
+          "description": "压力测量传感器",
+          "compatible": "bosch,bmp280",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x76"
         },
         {
           "type": "sensor-accelerometer",
@@ -235,7 +287,11 @@
             { "id": "data", "name": "数据" },
             { "id": "interrupt", "name": "中断" }
           ],
-          "description": "三轴加速度传感器"
+          "description": "三轴加速度传感器",
+          "compatible": "st,lis3dh",
+          "address-cells": 1,
+          "size-cells": 0,
+          "reg": "0x18"
         }
       ]
     }
